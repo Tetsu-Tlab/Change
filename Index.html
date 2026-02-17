@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+
+<head>
+
+   <meta charset="UTF-8">
+
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+   <title>車掌さんの万能グラフ作成ツール</title>
+
+   <!-- React & Tailwind CSS -->
+
+   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+
+   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+   <script src="https://cdn.tailwindcss.com"></script>
+
+  
+
+   <!-- Lucide Icons for React (UMD) -->
+
+   <!-- lucide-reactのUMDビルドを読み込みます -->
+
+   <script src="https://unpkg.com/lucide-react@0.344.0/dist/umd/lucide-react.min.js"></script>
+
+  
+
+   <style>
+
+       @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+
+       body {
+
+           font-family: 'Noto Sans JP', sans-serif;
+
+           background-color: #f1f5f9;
+
+           margin: 0;
+
+       }
+
+       .vertical-rl { writing-mode: vertical-rl; }
+
+   </style>
+
+</head>
+
+<body>
+
+   <div id="root"></div>
+
+
+
+   <script type="text/babel">
+
+       const { useState, useMemo, useEffect } = React;
+
+
+
+       // アイコン表示用コンポーネント（Lucide React対応版）
+
+       const Icon = ({ name, size = 24, className = "" }) => {
+
+           // グローバルのlucideReactオブジェクトからアイコンコンポーネントを取得
+
+           const lib = window.lucideReact || window.LucideReact;
+
+          
+
+           if (!lib) return null; // ライブラリがロードされていなければ何も表示しない
+
+
+
+           const IconComponent = lib[name];
+
+          
+
+           if (!IconComponent) {
+
+               // コンソールに警告を出して何も表示しない（エラーで止めない）
+
+               console.warn(`Icon "${name}" not found in lucide-react.`);
+
+               return null;
+
+           }
+
+
+
+           // Reactコンポーネントとしてレンダリング
+
+           return <IconComponent size={size} className={className} />;
+
+       };
+
+
+
+       const App = () => {
+
+           // グラフの基本設定
+
+           const [config, setConfig] = useState({
+
+               titleX: "駅の数",
+
+               unitX: "駅",
+
+               maxX: 10,
+
+               titleY: "時間",
+
+               unitY: "分",
+
+               maxY: 20
+
+           });
+
+
+
+           const [points, setPoints] = useState([]);
+
+           const [showLines, setShowLines] = useState(false);
+
+           const [message, setMessage] = useState("設定を 変えたら、記録を はじめよう！");
+
+           const [isSettingOpen, setIsSettingOpen] = useState(false);
+
+
+
+           // 軸の目盛りを計算
+
+           const getSteps = (max) => {
+
+               if (max <= 10) return 1;
+
+               if (max <= 20) return 2;
+
+               if (max <= 50) return 5;
+
+               if (max <= 100) return 10;
+
+               return Math.ceil(max / 10);
+
+           };
+
+
+
+           const stepX = getSteps(config.maxX);
+
+           const stepY = getSteps(config.maxY);
+
+
+
+           // 座標からグラフ上の位置（0-100%）を計算
+
+           const getPos = (x, y) => {
+
+               return {
+
+                   x: (x / config.maxX) * 100,
+
+                   y: (y / config.maxY) * 100,
+
+               };
+
+           };
+
+
+
+           // 点を打つ・消す
+
+           const handleGridClick = (e) => {
+
+               const rect = e.currentTarget.getBoundingClientRect();
+
+               const xRel = (e.clientX - rect.left) / rect.width;
+
+               const yRel = 1 - (e.clientY - rect.top) / rect.height;
