@@ -23,12 +23,12 @@ echo "バックアップ一覧（最新5件）:"; tmutil listbackups 2>/dev/null
 
 # バックアップ内のデータボリューム（Users/<自分> がある場所）を探す
 ROOT=""
-for d in "$LATEST" "$LATEST"/*; do
+for d in "$LATEST" "$LATEST"/* "$LATEST"/*/*; do
   [ -d "$d/Users/$USER" ] && { ROOT="$d"; break; }
 done
 if [ -z "$ROOT" ]; then
   open "$LATEST" 2>/dev/null; sleep 20   # Finderで開くと中身がマウントされる
-  for d in "$LATEST" "$LATEST"/*; do [ -d "$d/Users/$USER" ] && { ROOT="$d"; break; }; done
+  for d in "$LATEST" "$LATEST"/* "$LATEST"/*/*; do [ -d "$d/Users/$USER" ] && { ROOT="$d"; break; }; done
 fi
 [ -z "$ROOT" ] && { echo "バックアップ内にホームフォルダが見つかりません"; exit 1; }
 BH="$ROOT/Users/$USER"
