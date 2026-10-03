@@ -8,7 +8,16 @@ exec > >(tee "$OUT") 2>&1
 NG=0; warn(){ echo "⚠ $*"; NG=$((NG+1)); }
 
 LATEST=$(tmutil latestbackup 2>/dev/null)
-[ -z "$LATEST" ] && { echo "最新バックアップが取得できません（フルディスクアクセスを確認）"; exit 1; }
+if [ -z "$LATEST" ]; then
+  echo "最新バックアップが取得できません。原因の切り分け情報:"
+  echo "--- バックアップ先 ---"; tmutil destinationinfo 2>&1
+  echo "--- 状態 ---"; tmutil status 2>&1
+  echo "--- latestbackup のエラー内容 ---"; tmutil latestbackup 2>&1
+  echo "--- バックアップ一覧 ---"; tmutil listbackups 2>&1 | tail -5
+  echo "--- マウント中のボリューム ---"; ls /Volumes
+  echo "対処: ①フルディスクアクセスでターミナルをオン→ターミナルを⌘Qで完全終了→開き直す ②HDDが接続・マウントされているか確認"
+  exit 1
+fi
 echo "最新バックアップ: $LATEST"
 echo "バックアップ一覧（最新5件）:"; tmutil listbackups 2>/dev/null | tail -5
 
