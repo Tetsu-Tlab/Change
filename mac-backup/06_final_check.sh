@@ -6,8 +6,17 @@ exec > >(tee "$OUT") 2>&1
 LATEST=$(tmutil latestbackup 2>/dev/null)
 find_root(){ for d in "$LATEST" "$LATEST"/*; do [ -d "$d/Users/$USER" ] && { echo "$d"; return; }; done; }
 ROOT=$(find_root)
-if [ -z "$ROOT" ]; then echo "（バックアップを開いています…）"; open "$LATEST" 2>/dev/null; sleep 20; ROOT=$(find_root); fi
-[ -z "$ROOT" ] && { echo "最新バックアップの中身を開けません: ${LATEST##*/}"; ls -la "$LATEST" 2>&1 | head; exit 1; }
+MNT=""
+if [ -z "$ROOT" ]; then
+  # 最新バックアップ（APFSスナップショット）を読み取り専用で一時マウント
+  MP=$(tmutil destinationinfo | awk -F': ' '/Mount Point/{print $2; exit}')
+  DEV=$(diskutil info "$MP" | awk '/Device Node/{print $NF}')
+  SNAP=$(diskutil apfs listSnapshots "$DEV" | awk '/Name:/{print $NF}' | grep "$(basename "$LATEST")" | tail -1)
+  MNT="$HOME/.tm_verify_mnt"; mkdir -p "$MNT"
+  echo "（バックアップを読み取り専用で開きます。Macのログインパスワードを求められたら入力してください。画面には表示されません）"
+  sudo mount_apfs -o rdonly -s "$SNAP" "$DEV" "$MNT" && { LATEST="$MNT"; ROOT=$(find_root); }
+fi
+[ -z "$ROOT" ] && { echo "最新バックアップの中身を開けません: ${LATEST##*/}"; exit 1; }
 BH="$ROOT/Users/$USER"
 echo "最新バックアップ: ${LATEST##*/}"
 echo
@@ -31,4 +40,5 @@ for f in Desktop Documents Movies Music Downloads Library/Keychains Library/Mail
 done
 echo
 echo "[暗号化] $(diskutil info "$(tmutil destinationinfo | awk -F': ' '/Mount Point/{print $2; exit}')" | grep -E 'FileVault' | xargs)"
+[ -n "$MNT" ] && sudo umount "$MNT" 2>/dev/null && rmdir "$MNT"
 echo "レポート: $OUT"
