@@ -26,6 +26,10 @@ ROOT=""
 for d in "$LATEST" "$LATEST"/*; do
   [ -d "$d/Users/$USER" ] && { ROOT="$d"; break; }
 done
+if [ -z "$ROOT" ]; then
+  open "$LATEST" 2>/dev/null; sleep 20   # Finderで開くと中身がマウントされる
+  for d in "$LATEST" "$LATEST"/*; do [ -d "$d/Users/$USER" ] && { ROOT="$d"; break; }; done
+fi
 [ -z "$ROOT" ] && { echo "バックアップ内にホームフォルダが見つかりません"; exit 1; }
 BH="$ROOT/Users/$USER"
 echo "バックアップ内ホーム: $BH"
